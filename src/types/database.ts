@@ -22,8 +22,20 @@ export interface Report {
   location_name: string | null;
   photo_urls: string[] | null;
   eta_days: number | null;
+  is_anonymous: boolean | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+  is_anonymous: boolean | null;
 }
 
 export interface ReportInteraction {
@@ -38,4 +50,5 @@ export interface ReportInteraction {
 export interface ReportWithVotes extends Report {
   upvotes: number;
   downvotes: number;
+  reporter_name: string;
 }

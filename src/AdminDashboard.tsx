@@ -36,7 +36,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
-import type { Report, ReportStatus, ReportWithVotes } from "./types/database";
+import type {
+  Report,
+  ReportStatus,
+  ReportWithVotes,
+  Profile,
+} from "./types/database";
 
 export function AdminDashboard() {
   const [reports, setReports] = useState<ReportWithVotes[]>([]);
@@ -67,6 +72,19 @@ export function AdminDashboard() {
 
       if (interactionsError) throw interactionsError;
 
+      // Fetch all profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*");
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of user_id to profile for quick lookup
+      const profilesMap = new Map<string, Profile>();
+      profilesData?.forEach((profile) => {
+        profilesMap.set(profile.id, profile);
+      });
+
       // Calculate votes for each report
       const reportsWithVotes: ReportWithVotes[] = (reportsData || []).map(
         (report: Report) => {
@@ -83,10 +101,18 @@ export function AdminDashboard() {
             (interaction) => interaction.interaction_type === "downvote",
           ).length;
 
+          // Determine reporter name
+          let reporter_name = "Anonymous";
+          if (!report.is_anonymous) {
+            const profile = profilesMap.get(report.user_id);
+            reporter_name = profile?.full_name || profile?.email || "Unknown";
+          }
+
           return {
             ...report,
             upvotes,
             downvotes,
+            reporter_name,
           };
         },
       );
@@ -254,6 +280,9 @@ export function AdminDashboard() {
                   Title
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Reporter
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
                   Category
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
@@ -302,6 +331,11 @@ export function AdminDashboard() {
                         </Typography>
                       )}
                     </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={500}>
+                      {report.reporter_name}
+                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip
