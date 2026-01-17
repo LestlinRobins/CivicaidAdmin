@@ -1,7 +1,42 @@
 import { useEffect, useState } from "react";
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Card,
+  CardContent,
+  Grid,
+  IconButton,
+  CircularProgress,
+  Alert,
+  Stack,
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
+import {
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+  ThumbsUp,
+  ThumbsDown,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+} from "lucide-react";
 import { supabase } from "./lib/supabase";
 import type { Report, ReportStatus, ReportWithVotes } from "./types/database";
-import "./AdminDashboard.css";
 
 export function AdminDashboard() {
   const [reports, setReports] = useState<ReportWithVotes[]>([]);
@@ -92,16 +127,29 @@ export function AdminDashboard() {
     }
   }
 
-  const getStatusBadgeClass = (status: ReportStatus) => {
+  const getStatusColor = (
+    status: ReportStatus,
+  ): "warning" | "info" | "success" => {
     switch (status) {
       case "reported":
-        return "badge-warning";
+        return "warning";
       case "in_progress":
-        return "badge-primary";
+        return "info";
       case "resolved":
-        return "badge-success";
+        return "success";
       default:
-        return "badge-default";
+        return "info";
+    }
+  };
+
+  const getStatusIcon = (status: ReportStatus) => {
+    switch (status) {
+      case "reported":
+        return <AlertCircle size={16} />;
+      case "in_progress":
+        return <Clock size={16} />;
+      case "resolved":
+        return <CheckCircle2 size={16} />;
     }
   };
 
@@ -115,160 +163,252 @@ export function AdminDashboard() {
     });
   };
 
+  const handleFilterChange = (event: SelectChangeEvent) => {
+    setStatusFilter(event.target.value as ReportStatus | "all");
+  };
+
   const filteredReports =
     statusFilter === "all"
       ? reports
       : reports.filter((report) => report.status === statusFilter);
 
   if (loading) {
-    return <div className="loading">Loading reports...</div>;
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <CircularProgress size={60} />
+      </Box>
+    );
   }
 
   if (error) {
     return (
-      <div className="error">
-        <h2>Error</h2>
-        <p>{error}</p>
-        <button onClick={fetchReports}>Retry</button>
-      </div>
+      <Container maxWidth="md" sx={{ mt: 8 }}>
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={fetchReports}>
+              Retry
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <div className="admin-dashboard">
-      <header className="dashboard-header">
-        <h1>Civic Reports Admin Dashboard</h1>
-        <button onClick={fetchReports} className="refresh-btn">
-          Refresh
-        </button>
-      </header>
-
-      <div className="filters">
-        <label>
-          Status Filter:
-          <select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as ReportStatus | "all")
-            }
+    <Box sx={{ bgcolor: "#f5f7fa", minHeight: "100vh", py: 4 }}>
+      <Container maxWidth="xl">
+        {/* Header */}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={4}
+        >
+          <Typography variant="h3" component="h1" fontWeight={700}>
+            Civic Reports Admin
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<RefreshCw size={20} />}
+            onClick={fetchReports}
+            sx={{ borderRadius: 2 }}
           >
-            <option value="all">All Reports</option>
-            <option value="reported">Reported</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-          </select>
-        </label>
-      </div>
+            Refresh
+          </Button>
+        </Box>
 
-      <div className="stats">
-        <div className="stat-card">
-          <h3>{reports.length}</h3>
-          <p>Total Reports</p>
-        </div>
-        <div className="stat-card">
-          <h3>{reports.filter((r) => r.status === "reported").length}</h3>
-          <p>Pending</p>
-        </div>
-        <div className="stat-card">
-          <h3>{reports.filter((r) => r.status === "in_progress").length}</h3>
-          <p>In Progress</p>
-        </div>
-        <div className="stat-card">
-          <h3>{reports.filter((r) => r.status === "resolved").length}</h3>
-          <p>Resolved</p>
-        </div>
-      </div>
+        {/* Filter */}
+        <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Status Filter</InputLabel>
+            <Select
+              value={statusFilter}
+              label="Status Filter"
+              onChange={handleFilterChange}
+            >
+              <MenuItem value="all">All Reports</MenuItem>
+              <MenuItem value="reported">Reported</MenuItem>
+              <MenuItem value="in_progress">In Progress</MenuItem>
+              <MenuItem value="resolved">Resolved</MenuItem>
+            </Select>
+          </FormControl>
+        </Paper>
 
-      <div className="reports-table-container">
-        <table className="reports-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Category</th>
-              <th>Location</th>
-              <th>Status</th>
-              <th>Votes</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredReports.map((report) => (
-              <tr key={report.id}>
-                <td>
-                  <div className="report-title">
-                    <strong>{report.title}</strong>
-                    {report.description && (
-                      <p className="report-description">{report.description}</p>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  <span className="category-badge">{report.category}</span>
-                </td>
-                <td>{report.location_name || "N/A"}</td>
-                <td>
-                  <span
-                    className={`status-badge ${getStatusBadgeClass(report.status)}`}
-                  >
-                    {report.status.replace("_", " ")}
-                  </span>
-                </td>
-                <td>
-                  <div className="votes">
-                    <span className="upvotes">👍 {report.upvotes}</span>
-                    <span className="downvotes">👎 {report.downvotes}</span>
-                  </div>
-                </td>
-                <td>{formatDate(report.created_at)}</td>
-                <td>
-                  <div className="action-buttons">
-                    {report.status !== "reported" && (
-                      <button
-                        onClick={() =>
-                          updateReportStatus(report.id, "reported")
-                        }
-                        className="btn btn-small btn-warning"
-                        title="Mark as Reported"
-                      >
-                        Reported
-                      </button>
-                    )}
-                    {report.status !== "in_progress" && (
-                      <button
-                        onClick={() =>
-                          updateReportStatus(report.id, "in_progress")
-                        }
-                        className="btn btn-small btn-primary"
-                        title="Mark as In Progress"
-                      >
-                        In Progress
-                      </button>
-                    )}
-                    {report.status !== "resolved" && (
-                      <button
-                        onClick={() =>
-                          updateReportStatus(report.id, "resolved")
-                        }
-                        className="btn btn-small btn-success"
-                        title="Mark as Resolved"
-                      >
-                        Resolved
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Reports Table */}
+        <TableContainer
+          component={Paper}
+          sx={{ borderRadius: 3, boxShadow: 2 }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: "#f8fafc" }}>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Title
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Category
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Location
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Status
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Votes
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Created
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredReports.map((report) => (
+                <TableRow
+                  key={report.id}
+                  sx={{
+                    "&:hover": { bgcolor: "#f8fafc" },
+                    transition: "background-color 0.2s",
+                  }}
+                >
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body1" fontWeight={600}>
+                        {report.title}
+                      </Typography>
+                      {report.description && (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            maxWidth: 300,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {report.description}
+                        </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={report.category}
+                      size="small"
+                      sx={{
+                        textTransform: "capitalize",
+                        fontWeight: 500,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>{report.location_name || "N/A"}</TableCell>
+                  <TableCell>
+                    <Chip
+                      icon={getStatusIcon(report.status)}
+                      label={report.status.replace("_", " ")}
+                      color={getStatusColor(report.status)}
+                      size="small"
+                      sx={{
+                        textTransform: "capitalize",
+                        fontWeight: 600,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={2}>
+                      <Box display="flex" alignItems="center" gap={0.5}>
+                        <ThumbsUp size={16} color="#10b981" />
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color="#10b981"
+                        >
+                          {report.upvotes}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={0.5}>
+                        <ThumbsDown size={16} color="#ef4444" />
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color="#ef4444"
+                        >
+                          {report.downvotes}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDate(report.created_at)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={1}>
+                      {report.status !== "reported" && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          onClick={() =>
+                            updateReportStatus(report.id, "reported")
+                          }
+                        >
+                          Reported
+                        </Button>
+                      )}
+                      {report.status !== "in_progress" && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="info"
+                          onClick={() =>
+                            updateReportStatus(report.id, "in_progress")
+                          }
+                        >
+                          Progress
+                        </Button>
+                      )}
+                      {report.status !== "resolved" && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                          onClick={() =>
+                            updateReportStatus(report.id, "resolved")
+                          }
+                        >
+                          Resolved
+                        </Button>
+                      )}
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-        {filteredReports.length === 0 && (
-          <div className="no-reports">
-            <p>No reports found.</p>
-          </div>
-        )}
-      </div>
-    </div>
+          {filteredReports.length === 0 && (
+            <Box py={8} textAlign="center">
+              <Typography variant="h6" color="text.secondary">
+                No reports found
+              </Typography>
+            </Box>
+          )}
+        </TableContainer>
+      </Container>
+    </Box>
   );
 }
